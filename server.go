@@ -8,6 +8,10 @@ import (
 
 type Info struct {
 	MAC []byte
+
+	// DHCPRequest
+	RequestIP         net.IP
+	RequestDHCPServer net.IP
 }
 
 type Callback func(Info)
@@ -76,6 +80,18 @@ func (s *Server) run(socket net.PacketConn) error {
 		if msgType == DHCPTypeRequest {
 			var info Info
 			info.MAC = frame.chaddr[:frame.hlen]
+
+			if ipBytes, ok := frame.opts[OptionRequestedIPAddress]; ok {
+				info.RequestIP = net.IP(ipBytes)
+			} else {
+				continue
+			}
+
+			if srvBytes, ok := frame.opts[OptionServerIdentifier]; ok {
+				info.RequestDHCPServer = net.IP(srvBytes)
+			} else {
+				continue
+			}
 
 			if s.requestCb != nil {
 				s.requestCb(info)

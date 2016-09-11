@@ -27,6 +27,7 @@ type frame struct {
 
 func parse(socket net.PacketConn, buf []byte) (frame, error) {
 	var f frame
+	f.opts = make(map[byte][]byte)
 
 	n, addr, err := socket.ReadFrom(buf)
 	if err != nil {
