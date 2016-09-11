@@ -55,7 +55,10 @@ func parse(socket net.PacketConn, buf []byte) (frame, error) {
 
 	for cursor < len(optbuf) {
 		code := optbuf[cursor]
-		if code == 0xff {
+		if code == OptionPad {
+			continue
+		}
+		if code == OptionEnd {
 			break
 		}
 

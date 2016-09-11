@@ -1,7 +1,6 @@
 package dhcp
 
 import (
-	"fmt"
 	"log"
 	"net"
 )

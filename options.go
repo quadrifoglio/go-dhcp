@@ -1,5 +1,90 @@
 package dhcp
 
+const (
+	OptionPad                                        byte = 0
+	OptionSubnetMask                                 byte = 1
+	OptionTimeOffset                                 byte = 2
+	OptionRouter                                     byte = 3
+	OptionTimeServer                                 byte = 4
+	OptionNameServer                                 byte = 5
+	OptionDomainNameServer                           byte = 6
+	OptionLogServer                                  byte = 7
+	OptionCookieServer                               byte = 8
+	OptionLPRServer                                  byte = 9
+	OptionImpressServer                              byte = 10
+	OptionResourceLocationServer                     byte = 11
+	OptionHostName                                   byte = 12
+	OptionBootFileSize                               byte = 13
+	OptionMeritDumpFile                              byte = 14
+	OptionDomainName                                 byte = 15
+	OptionSwapServer                                 byte = 16
+	OptionRootPath                                   byte = 17
+	OptionExtensionsPath                             byte = 18
+	OptionIPForwardingEnableDisable                  byte = 19
+	OptionNonLocalSourceRoutingEnableDisable         byte = 20
+	OptionPolicyFilter                               byte = 21
+	OptionMaximumDatagramReassemblySize              byte = 22
+	OptionDefaultIPTimeToLive                        byte = 23
+	OptionPathMTUAgingTimeout                        byte = 24
+	OptionPathMTUPlateauTable                        byte = 25
+	OptionInterfaceMTU                               byte = 26
+	OptionAllSubnetsAreLocal                         byte = 27
+	OptionBroadcastAddress                           byte = 28
+	OptionPerformMaskDiscovery                       byte = 29
+	OptionMaskSupplier                               byte = 30
+	OptionPerformRouterDiscovery                     byte = 31
+	OptionRouterSolicitationAddress                  byte = 32
+	OptionStaticRoute                                byte = 33
+	OptionTrailerEncapsulation                       byte = 34
+	OptionARPCacheTimeout                            byte = 35
+	OptionEthernetEncapsulation                      byte = 36
+	OptionTCPDefaultTTL                              byte = 37
+	OptionTCPKeepaliveInterval                       byte = 38
+	OptionTCPKeepaliveGarbage                        byte = 39
+	OptionNetworkInformationServiceDomain            byte = 40
+	OptionNetworkInformationServers                  byte = 41
+	OptionNetworkTimeProtocolServers                 byte = 42
+	OptionVendorSpecificInformation                  byte = 43
+	OptionNetBIOSOverTCPIPNameServer                 byte = 44
+	OptionNetBIOSOverTCPIPDatagramDistributionServer byte = 45
+	OptionNetBIOSOverTCPIPNodeType                   byte = 46
+	OptionNetBIOSOverTCPIPScope                      byte = 47
+	OptionXWindowSystemFontServer                    byte = 48
+	OptionXWindowSystemDisplayManager                byte = 49
+	OptionNetworkInformationServicePlusDomain        byte = 64
+	OptionNetworkInformationServicePlusServers       byte = 65
+	OptionMobileIPHomeAgent                          byte = 68
+	OptionSimpleMailTransportProtocol                byte = 69
+	OptionPostOfficeProtocolServer                   byte = 70
+	OptionNetworkNewsTransportProtocol               byte = 71
+	OptionDefaultWorldWideWebServer                  byte = 72
+	OptionDefaultFingerServer                        byte = 73
+	OptionDefaultInternetRelayChatServer             byte = 74
+	OptionStreetTalkServer                           byte = 75
+	OptionStreetTalkDirectoryAssistance              byte = 76
+	OptionRelayAgentInformation                      byte = 82
+	OptionRequestedIPAddress                         byte = 50
+	OptionIPAddressLeaseTime                         byte = 51
+	OptionOverload                                   byte = 52
+	OptionDHCPMessageType                            byte = 53
+	OptionServerIdentifier                           byte = 54
+	OptionParameterRequestList                       byte = 55
+	OptionMessage                                    byte = 56
+	OptionMaximumDHCPMessageSize                     byte = 57
+	OptionRenewalTimeValue                           byte = 58
+	OptionRebindingTimeValue                         byte = 59
+	OptionVendorClassIdentifier                      byte = 60
+	OptionClientIdentifier                           byte = 61
+	OptionTFTPServerName                             byte = 66
+	OptionBootFileName                               byte = 67
+	OptionUserClass                                  byte = 77
+	OptionClientArchitecture                         byte = 93
+	OptionTZPOSIXString                              byte = 100
+	OptionTZDatabaseString                           byte = 101
+	OptionClasslessRouteFormat                       byte = 121
+	OptionEnd                                        byte = 255
+)
+
 type Option struct {
 	Type  byte
 	Value []byte
