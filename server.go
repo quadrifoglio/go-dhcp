@@ -1,6 +1,7 @@
 package dhcp
 
 import (
+	"fmt"
 	"log"
 	"net"
 )
@@ -29,7 +30,7 @@ func (s *Server) run(socket net.PacketConn) error {
 	buf := make([]byte, 1500)
 
 	for {
-		frame, err := parse(socket, buf)
+		_, err := parse(socket, buf)
 		if err != nil {
 			log.Println(err)
 			continue

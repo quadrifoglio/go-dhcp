@@ -19,6 +19,9 @@ type frame struct {
 	chaddr []byte
 	sname  []byte
 	file   []byte
+	cookie []byte
+
+	opts []Option
 }
 
 func parse(socket net.PacketConn, buf []byte) (frame, error) {
@@ -45,6 +48,23 @@ func parse(socket net.PacketConn, buf []byte) (frame, error) {
 	f.chaddr = buf[28:44]
 	f.sname = buf[44:108]
 	f.file = buf[108:236]
+	f.cookie = buf[236:240]
+
+	cursor := 0
+	optbuf := buf[240:]
+
+	for cursor < len(optbuf) {
+		code := optbuf[cursor]
+		if code == 0xff {
+			break
+		}
+
+		len := optbuf[cursor+1]
+		cursor += 2
+
+		f.opts = append(f.opts, Option{code, optbuf[cursor : cursor+int(len)]})
+		cursor += int(len)
+	}
 
 	return f, nil
 }
