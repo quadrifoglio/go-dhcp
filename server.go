@@ -1,17 +1,39 @@
 package dhcp
 
 import (
+	"fmt"
 	"log"
 	"net"
 )
 
-type Server struct {
+type Info struct {
+	MAC []byte
 }
 
-func NewServer(startAddr string, numLease int, opts []Option) (Server, error) {
+type Callback func(Info)
+
+type Server struct {
+	discoverCb Callback
+	requestCb  Callback
+	releaseCb  Callback
+}
+
+func NewServer(startAddr string, numLease int) (Server, error) {
 	var serv Server
 
 	return serv, nil
+}
+
+func (s *Server) HandleFunc(event string, callback Callback) {
+	if event == "discover" {
+		s.discoverCb = callback
+	}
+	if event == "request" {
+		s.requestCb = callback
+	}
+	if event == "release" {
+		s.releaseCb = callback
+	}
 }
 
 func (s *Server) Start() error {
@@ -29,10 +51,43 @@ func (s *Server) run(socket net.PacketConn) error {
 	buf := make([]byte, 1500)
 
 	for {
-		_, err := parse(socket, buf)
+		frame, err := parse(socket, buf)
 		if err != nil {
 			log.Println(err)
 			continue
+		}
+
+		var msgType byte
+
+		if b, ok := frame.opts[OptionDHCPMessageType]; ok {
+			msgType = b[0]
+		} else {
+			return fmt.Errorf("no valid dhcp message type field")
+		}
+
+		if msgType == DHCPTypeDiscover {
+			var info Info
+			info.MAC = frame.chaddr[:frame.hlen]
+
+			if s.discoverCb != nil {
+				s.discoverCb(info)
+			}
+		}
+		if msgType == DHCPTypeRequest {
+			var info Info
+			info.MAC = frame.chaddr[:frame.hlen]
+
+			if s.requestCb != nil {
+				s.requestCb(info)
+			}
+		}
+		if msgType == DHCPTypeRelease {
+			var info Info
+			info.MAC = frame.chaddr[:frame.hlen]
+
+			if s.releaseCb != nil {
+				s.releaseCb(info)
+			}
 		}
 	}
 

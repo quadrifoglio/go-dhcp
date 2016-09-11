@@ -10,7 +10,7 @@ import (
 func main() {
 	fmt.Println("dhcpd (go-dhcp)")
 
-	server, err := dhcp.NewServer("10.0.0.0", 10, nil)
+	server, err := dhcp.NewServer("10.0.0.0", 10)
 	if err != nil {
 		log.Fatal(err)
 	}

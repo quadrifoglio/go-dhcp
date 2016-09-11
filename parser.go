@@ -9,6 +9,7 @@ type frame struct {
 	src  net.Addr
 	size int
 
+	hlen   uint8
 	xid    uint32
 	secs   uint16
 	flags  uint16
@@ -21,7 +22,7 @@ type frame struct {
 	file   []byte
 	cookie []byte
 
-	opts []Option
+	opts map[byte][]byte
 }
 
 func parse(socket net.PacketConn, buf []byte) (frame, error) {
@@ -38,6 +39,7 @@ func parse(socket net.PacketConn, buf []byte) (frame, error) {
 	f.src = addr
 	f.size = n
 
+	f.hlen = uint8(buf[2])
 	f.xid = uint32(pack(4, buf[4:8]))
 	f.secs = uint16(pack(2, buf[8:10]))
 	f.flags = uint16(pack(2, buf[10:12]))
@@ -65,7 +67,7 @@ func parse(socket net.PacketConn, buf []byte) (frame, error) {
 		len := optbuf[cursor+1]
 		cursor += 2
 
-		f.opts = append(f.opts, Option{code, optbuf[cursor : cursor+int(len)]})
+		f.opts[code] = optbuf[cursor : cursor+int(len)]
 		cursor += int(len)
 	}
 

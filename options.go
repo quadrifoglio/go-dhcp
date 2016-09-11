@@ -83,9 +83,12 @@ const (
 	OptionTZDatabaseString                           byte = 101
 	OptionClasslessRouteFormat                       byte = 121
 	OptionEnd                                        byte = 255
-)
 
-type Option struct {
-	Type  byte
-	Value []byte
-}
+	DHCPTypeDiscover byte = 0x01
+	DHCPTypeOffer    byte = 0x02
+	DHCPTypeRequest  byte = 0x03
+	DHCPTypeDecline  byte = 0x04
+	DHCPTypeACK      byte = 0x05
+	DHCPTypeNACK     byte = 0x06
+	DHCPTypeRelease  byte = 0x07
+)
