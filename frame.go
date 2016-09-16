@@ -2,14 +2,13 @@ package dhcp
 
 import (
 	"fmt"
-	"net"
 )
 
 type frame struct {
-	src  net.Addr
-	size int
-
-	hlen   uint8
+	op     byte
+	htype  byte
+	hlen   byte
+	hops   byte
 	xid    uint32
 	secs   uint16
 	flags  uint16
@@ -25,22 +24,18 @@ type frame struct {
 	opts map[byte][]byte
 }
 
-func parse(socket net.PacketConn, buf []byte) (frame, error) {
+func parse(buf []byte) (frame, error) {
 	var f frame
 	f.opts = make(map[byte][]byte)
 
-	n, addr, err := socket.ReadFrom(buf)
-	if err != nil {
-		return f, err
-	}
-	if n <= 236 {
+	if len(buf) <= 236 {
 		return f, fmt.Errorf("invalid dhcp packet")
 	}
 
-	f.src = addr
-	f.size = n
-
-	f.hlen = uint8(buf[2])
+	f.op = buf[0]
+	f.htype = buf[1]
+	f.hlen = buf[2]
+	f.hops = buf[3]
 	f.xid = uint32(pack(4, buf[4:8]))
 	f.secs = uint16(pack(2, buf[8:10]))
 	f.flags = uint16(pack(2, buf[10:12]))
@@ -73,4 +68,40 @@ func parse(socket net.PacketConn, buf []byte) (frame, error) {
 	}
 
 	return f, nil
+}
+
+func (f frame) toBytes() []byte {
+	buf := make([]byte, 240)
+
+	buf[0] = f.op
+	buf[1] = f.htype
+	buf[2] = f.hlen
+	buf[3] = f.hops
+
+	copy(buf[4:], unpack(4, uint64(f.xid)))
+	copy(buf[8:], unpack(2, uint64(f.secs)))
+	copy(buf[10:], unpack(2, uint64(f.flags)))
+	copy(buf[12:], f.ciaddr[:4])
+	copy(buf[16:], f.yiaddr[:4])
+	copy(buf[20:], f.siaddr[:4])
+	copy(buf[24:], f.giaddr[:4])
+	copy(buf[28:], f.chaddr[:f.hlen])
+
+	// BOOTP legacy...
+	var i int
+	for i = 44; i < 44+192; i++ {
+		buf[i] = 0
+	}
+
+	copy(buf[i:], []byte{0x63, 0x82, 0x53, 0x63})
+	i += 4
+
+	for code, value := range f.opts {
+		buf = append(buf, code)
+		buf = append(buf, byte(len(value)))
+		buf = append(buf, value...)
+	}
+
+	buf = append(buf, OptionEnd)
+	return buf
 }

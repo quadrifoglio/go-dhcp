@@ -6,38 +6,27 @@ import (
 	"net"
 )
 
-type Info struct {
-	MAC []byte
-
-	// DHCPRequest
-	RequestIP         net.IP
-	RequestDHCPServer net.IP
-}
-
-type Callback func(Info)
-
 type Server struct {
-	discoverCb Callback
-	requestCb  Callback
-	releaseCb  Callback
+	discoverCb func(net.PacketConn, net.HardwareAddr)
+	requestCb  func(net.PacketConn, net.HardwareAddr, net.IP)
+	releaseCb  func(net.PacketConn, net.HardwareAddr)
 }
 
-func NewServer(startAddr string, numLease int) (Server, error) {
+func NewServer() (Server, error) {
 	var serv Server
-
 	return serv, nil
 }
 
-func (s *Server) HandleFunc(event string, callback Callback) {
-	if event == "discover" {
-		s.discoverCb = callback
-	}
-	if event == "request" {
-		s.requestCb = callback
-	}
-	if event == "release" {
-		s.releaseCb = callback
-	}
+func (s *Server) HandleDiscover(callback func(net.PacketConn, net.HardwareAddr)) {
+	s.discoverCb = callback
+}
+
+func (s *Server) HandleRequest(callback func(net.PacketConn, net.HardwareAddr, net.IP)) {
+	s.requestCb = callback
+}
+
+func (s *Server) HandleRelease(callback func(net.PacketConn, net.HardwareAddr)) {
+	s.releaseCb = callback
 }
 
 func (s *Server) Start() error {
@@ -55,7 +44,12 @@ func (s *Server) run(socket net.PacketConn) error {
 	buf := make([]byte, 1500)
 
 	for {
-		frame, err := parse(socket, buf)
+		n, _, err := socket.ReadFrom(buf)
+		if err != nil {
+			return err
+		}
+
+		frame, err := parse(buf[:n])
 		if err != nil {
 			log.Println(err)
 			continue
@@ -70,39 +64,32 @@ func (s *Server) run(socket net.PacketConn) error {
 		}
 
 		if msgType == DHCPTypeDiscover {
-			var info Info
-			info.MAC = frame.chaddr[:frame.hlen]
-
 			if s.discoverCb != nil {
-				s.discoverCb(info)
+				s.discoverCb(socket, frame.chaddr[:frame.hlen])
 			}
 		}
 		if msgType == DHCPTypeRequest {
-			var info Info
-			info.MAC = frame.chaddr[:frame.hlen]
+			var requestIP net.IP
 
 			if ipBytes, ok := frame.opts[OptionRequestedIPAddress]; ok {
-				info.RequestIP = net.IP(ipBytes)
+				requestIP = net.IP(ipBytes)
 			} else {
-				continue
+				return fmt.Errorf("no request ip address in dhcp request")
 			}
 
-			if srvBytes, ok := frame.opts[OptionServerIdentifier]; ok {
+			/*if srvBytes, ok := frame.opts[OptionServerIdentifier]; ok {
 				info.RequestDHCPServer = net.IP(srvBytes)
 			} else {
 				continue
-			}
+			}*/
 
 			if s.requestCb != nil {
-				s.requestCb(info)
+				s.requestCb(socket, frame.chaddr[:frame.hlen], requestIP)
 			}
 		}
 		if msgType == DHCPTypeRelease {
-			var info Info
-			info.MAC = frame.chaddr[:frame.hlen]
-
 			if s.releaseCb != nil {
-				s.releaseCb(info)
+				s.releaseCb(socket, frame.chaddr[:frame.hlen])
 			}
 		}
 	}
