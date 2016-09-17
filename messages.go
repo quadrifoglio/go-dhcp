@@ -36,7 +36,7 @@ func (m Message) GetFrame() []byte {
 	if m.Type == DHCPTypeDiscover || m.Type == DHCPTypeRequest || m.Type == DHCPTypeRelease {
 		f.op = 0x01
 	}
-	if m.Type == DHCPTypeOffer || m.Type == DHCPTypeACK || m.Type == DHCPTypeNACK {
+	if m.Type == DHCPTypeOffer || m.Type == DHCPTypeACK || m.Type == DHCPTypeNACK || m.Type == DHCPTypeDecline {
 		f.op = 0x02
 	}
 

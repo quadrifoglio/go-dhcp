@@ -9,21 +9,25 @@ import (
 	"github.com/quadrifoglio/go-dhcp"
 )
 
+var (
+	ServerIP = []byte{10, 0, 0, 1}
+
+	LeaseIP     = []byte{10, 0, 0, 100}
+	LeaseMask   = []byte{255, 255, 255, 0}
+	LeaseRouter = []byte{10, 0, 0, 254}
+	LeaseTime   = uint32(86400) // 1 Day
+)
+
 func HandleDiscover(s *dhcp.Server, id uint32, mac net.HardwareAddr) {
 	log.Printf("DHCP Discover from NIC %s\n", mac)
 
-	serverIp := []byte{10, 0, 0, 1}
-	clientIp := []byte{10, 0, 0, 100}
-	clientMask := []byte{255, 255, 255, 0}
-	clientRouter := []byte{10, 0, 0, 254}
 	leaseTime := make([]byte, 4)
+	binary.BigEndian.PutUint32(leaseTime, LeaseTime)
 
-	binary.BigEndian.PutUint32(leaseTime, 86400)
-
-	message := dhcp.NewMessage(dhcp.DHCPTypeOffer, id, serverIp, clientIp, mac)
-	message.SetOption(dhcp.OptionSubnetMask, clientMask)
-	message.SetOption(dhcp.OptionRouter, clientRouter)
-	message.SetOption(dhcp.OptionServerIdentifier, serverIp)
+	message := dhcp.NewMessage(dhcp.DHCPTypeOffer, id, ServerIP, LeaseIP, mac)
+	message.SetOption(dhcp.OptionSubnetMask, LeaseMask)
+	message.SetOption(dhcp.OptionRouter, LeaseRouter)
+	message.SetOption(dhcp.OptionServerIdentifier, ServerIP)
 	message.SetOption(dhcp.OptionIPAddressLeaseTime, leaseTime)
 
 	s.BroadcastPacket(message.GetFrame())
@@ -32,16 +36,13 @@ func HandleDiscover(s *dhcp.Server, id uint32, mac net.HardwareAddr) {
 func HandleRequest(s *dhcp.Server, id uint32, mac net.HardwareAddr, requestedIp net.IP) {
 	log.Printf("DHCP Request from NIC %s for IP %s\n", mac, requestedIp)
 
-	serverIp := []byte{10, 0, 0, 1}
-	clientMask := []byte{255, 255, 255, 0}
-	clientRouter := []byte{10, 0, 0, 254}
 	leaseTime := make([]byte, 4)
-	binary.BigEndian.PutUint32(leaseTime, 86400)
+	binary.BigEndian.PutUint32(leaseTime, LeaseTime)
 
-	message := dhcp.NewMessage(5, id, serverIp, requestedIp, mac)
-	message.SetOption(dhcp.OptionSubnetMask, clientMask)
-	message.SetOption(dhcp.OptionRouter, clientRouter)
-	message.SetOption(dhcp.OptionServerIdentifier, serverIp)
+	message := dhcp.NewMessage(dhcp.DHCPTypeACK, id, ServerIP, requestedIp, mac)
+	message.SetOption(dhcp.OptionSubnetMask, LeaseMask)
+	message.SetOption(dhcp.OptionRouter, LeaseRouter)
+	message.SetOption(dhcp.OptionServerIdentifier, ServerIP)
 	message.SetOption(dhcp.OptionIPAddressLeaseTime, leaseTime)
 
 	s.BroadcastPacket(message.GetFrame())
