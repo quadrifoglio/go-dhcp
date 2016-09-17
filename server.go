@@ -6,11 +6,13 @@ import (
 	"net"
 )
 
-type DiscoverCallback func(net.PacketConn, uint32, net.HardwareAddr)
-type RequestCallback func(net.PacketConn, uint32, net.HardwareAddr, net.IP)
-type ReleaseCallback func(net.PacketConn, net.HardwareAddr)
+type DiscoverCallback func(*Server, uint32, net.HardwareAddr)
+type RequestCallback func(*Server, uint32, net.HardwareAddr, net.IP)
+type ReleaseCallback func(*Server, net.HardwareAddr)
 
 type Server struct {
+	socket net.PacketConn
+
 	discoverCb DiscoverCallback
 	requestCb  RequestCallback
 	releaseCb  ReleaseCallback
@@ -19,6 +21,17 @@ type Server struct {
 func NewServer() (Server, error) {
 	var serv Server
 	return serv, nil
+}
+
+func (s *Server) BroadcastPacket(packet []byte) error {
+	addr := &net.UDPAddr{IP: net.IPv4(255, 255, 255, 255), Port: 68}
+
+	_, err := s.socket.WriteTo(packet, addr)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *Server) HandleDiscover(callback DiscoverCallback) {
@@ -33,22 +46,19 @@ func (s *Server) HandleRelease(callback ReleaseCallback) {
 	s.releaseCb = callback
 }
 
-func (s *Server) Start() error {
+func (s *Server) ListenAndServe() error {
 	socket, err := net.ListenPacket("udp4", ":67")
 	if err != nil {
 		return err
 	}
 
-	defer socket.Close()
+	s.socket = socket
+	defer s.socket.Close()
 
-	return s.run(socket)
-}
-
-func (s *Server) run(socket net.PacketConn) error {
 	buf := make([]byte, 1500)
 
 	for {
-		n, _, err := socket.ReadFrom(buf)
+		n, _, err := s.socket.ReadFrom(buf)
 		if err != nil {
 			return err
 		}
@@ -69,7 +79,7 @@ func (s *Server) run(socket net.PacketConn) error {
 
 		if msgType == DHCPTypeDiscover {
 			if s.discoverCb != nil {
-				s.discoverCb(socket, frame.xid, frame.chaddr[:frame.hlen])
+				s.discoverCb(s, frame.xid, frame.chaddr[:frame.hlen])
 			}
 		}
 		if msgType == DHCPTypeRequest {
@@ -88,12 +98,12 @@ func (s *Server) run(socket net.PacketConn) error {
 			}*/
 
 			if s.requestCb != nil {
-				s.requestCb(socket, frame.xid, frame.chaddr[:frame.hlen], requestIP)
+				s.requestCb(s, frame.xid, frame.chaddr[:frame.hlen], requestIP)
 			}
 		}
 		if msgType == DHCPTypeRelease {
 			if s.releaseCb != nil {
-				s.releaseCb(socket, frame.chaddr[:frame.hlen])
+				s.releaseCb(s, frame.chaddr[:frame.hlen])
 			}
 		}
 	}

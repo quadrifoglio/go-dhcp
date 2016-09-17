@@ -11,7 +11,7 @@ type Offer struct {
 
 	LeaseTime int
 	IP        net.IP
-	Mask      net.IP
+	Mask      net.IPMask
 	Router    net.IP
 	DNS       []net.IP
 }
@@ -43,7 +43,7 @@ func (o Offer) GetBytes() []byte {
 	f.opts = make(map[byte][]byte)
 	f.opts[OptionServerIdentifier] = o.serverIP.To4()
 	f.opts[OptionDHCPMessageType] = []byte{DHCPTypeOffer}
-	f.opts[OptionSubnetMask] = o.Mask.To4()
+	f.opts[OptionSubnetMask] = o.Mask
 	f.opts[OptionIPAddressLeaseTime] = []byte{0x00, 0x00, 0xff, 0xff}
 
 	if len(o.Router) > 0 {
