@@ -20,6 +20,10 @@ type Server struct {
 
 func NewServer() (Server, error) {
 	var serv Server
+	serv.discoverCb = nil
+	serv.requestCb = nil
+	serv.releaseCb = nil
+
 	return serv, nil
 }
 
@@ -83,22 +87,16 @@ func (s *Server) ListenAndServe() error {
 			}
 		}
 		if msgType == DHCPTypeRequest {
-			var requestIP net.IP
-
-			if ipBytes, ok := frame.opts[OptionRequestedIPAddress]; ok {
-				requestIP = net.IP(ipBytes)
-			} else {
-				return fmt.Errorf("no request ip address in dhcp request")
-			}
-
-			/*if srvBytes, ok := frame.opts[OptionServerIdentifier]; ok {
-				info.RequestDHCPServer = net.IP(srvBytes)
-			} else {
-				continue
-			}*/
-
 			if s.requestCb != nil {
-				s.requestCb(s, frame.xid, frame.chaddr[:frame.hlen], requestIP)
+				var reqIp net.IP
+
+				if ip, ok := frame.opts[OptionRequestedIPAddress]; ok {
+					reqIp = ip
+				} else {
+					return fmt.Errorf("no requested ip address in dhcp request")
+				}
+
+				s.requestCb(s, frame.xid, frame.chaddr[:frame.hlen], reqIp)
 			}
 		}
 		if msgType == DHCPTypeRelease {

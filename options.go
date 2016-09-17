@@ -92,3 +92,5 @@ const (
 	DHCPTypeNACK     byte = 0x06
 	DHCPTypeRelease  byte = 0x07
 )
+
+type Options map[byte][]byte

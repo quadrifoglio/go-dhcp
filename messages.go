@@ -4,53 +4,61 @@ import (
 	"net"
 )
 
-type Offer struct {
-	serverIP    net.IP
-	clientMAC   []byte
-	transaction uint32
+type Message struct {
+	Type          byte
+	TransactionID uint32
+	ServerIP      net.IP
+	ClientIP      net.IP
+	ClientMAC     net.HardwareAddr
 
-	LeaseTime int
-	IP        net.IP
-	Mask      net.IPMask
-	Router    net.IP
-	DNS       []net.IP
+	Options Options
 }
 
-func NewOffer(serverIP net.IP, clientMAC []byte, transaction uint32) Offer {
-	var o Offer
-	o.serverIP = serverIP
-	o.clientMAC = clientMAC
-	o.transaction = transaction
+func NewMessage(t byte, transactionId uint32, serverIp, clientIp net.IP, clientMac net.HardwareAddr) Message {
+	var m Message
+	m.Type = t
+	m.TransactionID = transactionId
+	m.ServerIP = serverIp
+	m.ClientIP = clientIp
+	m.ClientMAC = clientMac
+	m.Options = make(map[byte][]byte)
 
-	return o
+	return m
 }
 
-func (o Offer) GetBytes() []byte {
+func (m *Message) SetOption(option byte, value []byte) {
+	m.Options[option] = value
+}
+
+func (m Message) GetFrame() []byte {
 	var f frame
-	f.op = 0x02
+
+	if m.Type == DHCPTypeDiscover || m.Type == DHCPTypeRequest || m.Type == DHCPTypeRelease {
+		f.op = 0x01
+	}
+	if m.Type == DHCPTypeOffer || m.Type == DHCPTypeACK || m.Type == DHCPTypeNACK {
+		f.op = 0x02
+	}
+
 	f.htype = 0x01
 	f.hlen = 0x06
 	f.hops = 0x00
-	f.xid = o.transaction
+	f.xid = m.TransactionID
 	f.secs = 0x0000
 	f.flags = 0x0000
 	f.ciaddr = unpack(4, uint64(0x00000000))
-	f.yiaddr = o.IP
-	f.siaddr = o.serverIP
+	f.yiaddr = m.ClientIP
+	f.siaddr = m.ServerIP
 	f.giaddr = unpack(4, uint64(0x00000000))
-	f.chaddr = o.clientMAC
+	f.chaddr = m.ClientMAC
 
 	f.opts = make(map[byte][]byte)
-	f.opts[OptionServerIdentifier] = o.serverIP.To4()
-	f.opts[OptionDHCPMessageType] = []byte{DHCPTypeOffer}
-	f.opts[OptionSubnetMask] = o.Mask
-	f.opts[OptionIPAddressLeaseTime] = []byte{0x00, 0x00, 0xff, 0xff}
 
-	if len(o.Router) > 0 {
-		f.opts[OptionRouter] = o.Router
+	for opt, val := range m.Options {
+		f.opts[opt] = val
 	}
 
-	// TODO: Other options
+	f.opts[OptionDHCPMessageType] = []byte{m.Type}
 
 	return f.toBytes()
 }
