@@ -6,10 +6,14 @@ import (
 	"net"
 )
 
+type DiscoverCallback func(net.PacketConn, uint32, net.HardwareAddr)
+type RequestCallback func(net.PacketConn, uint32, net.HardwareAddr, net.IP)
+type ReleaseCallback func(net.PacketConn, net.HardwareAddr)
+
 type Server struct {
-	discoverCb func(net.PacketConn, net.HardwareAddr)
-	requestCb  func(net.PacketConn, net.HardwareAddr, net.IP)
-	releaseCb  func(net.PacketConn, net.HardwareAddr)
+	discoverCb DiscoverCallback
+	requestCb  RequestCallback
+	releaseCb  ReleaseCallback
 }
 
 func NewServer() (Server, error) {
@@ -17,15 +21,15 @@ func NewServer() (Server, error) {
 	return serv, nil
 }
 
-func (s *Server) HandleDiscover(callback func(net.PacketConn, net.HardwareAddr)) {
+func (s *Server) HandleDiscover(callback DiscoverCallback) {
 	s.discoverCb = callback
 }
 
-func (s *Server) HandleRequest(callback func(net.PacketConn, net.HardwareAddr, net.IP)) {
+func (s *Server) HandleRequest(callback RequestCallback) {
 	s.requestCb = callback
 }
 
-func (s *Server) HandleRelease(callback func(net.PacketConn, net.HardwareAddr)) {
+func (s *Server) HandleRelease(callback ReleaseCallback) {
 	s.releaseCb = callback
 }
 
@@ -65,7 +69,7 @@ func (s *Server) run(socket net.PacketConn) error {
 
 		if msgType == DHCPTypeDiscover {
 			if s.discoverCb != nil {
-				s.discoverCb(socket, frame.chaddr[:frame.hlen])
+				s.discoverCb(socket, frame.xid, frame.chaddr[:frame.hlen])
 			}
 		}
 		if msgType == DHCPTypeRequest {
@@ -84,7 +88,7 @@ func (s *Server) run(socket net.PacketConn) error {
 			}*/
 
 			if s.requestCb != nil {
-				s.requestCb(socket, frame.chaddr[:frame.hlen], requestIP)
+				s.requestCb(socket, frame.xid, frame.chaddr[:frame.hlen], requestIP)
 			}
 		}
 		if msgType == DHCPTypeRelease {

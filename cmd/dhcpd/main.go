@@ -8,12 +8,13 @@ import (
 	"github.com/quadrifoglio/go-dhcp"
 )
 
-func HandleDiscover(socket net.PacketConn, mac net.HardwareAddr) {
+func HandleDiscover(socket net.PacketConn, transaction uint32, mac net.HardwareAddr) {
 	log.Printf("DHCP Discover from NIC %s\n", mac)
 
-	offer := dhcp.NewOffer(net.ParseIP("10.0.0.1"), mac)
-	offer.IP = net.ParseIP("10.0.0.100")
-	offer.Mask = []byte{0xff, 0xff, 0xff, 0xff}
+	offer := dhcp.NewOffer(net.IPv4(10, 0, 0, 1), mac, transaction)
+	offer.IP = net.IPv4(10, 0, 0, 100)
+	offer.Mask = net.IPv4(255, 255, 255, 0)
+	offer.Router = net.IPv4(10, 0, 0, 1)
 
 	ip := &net.UDPAddr{IP: net.ParseIP("255.255.255.255"), Port: 68}
 
@@ -23,7 +24,7 @@ func HandleDiscover(socket net.PacketConn, mac net.HardwareAddr) {
 	}
 }
 
-func HandleRequest(socket net.PacketConn, mac net.HardwareAddr, requestedIP net.IP) {
+func HandleRequest(socket net.PacketConn, transaction uint32, mac net.HardwareAddr, requestedIP net.IP) {
 	log.Printf("DHCP Request from NIC 0x%x for IP address %s\n", mac, requestedIP)
 }
 

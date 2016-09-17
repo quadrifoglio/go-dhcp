@@ -1,6 +1,7 @@
 package dhcp
 
 import (
+	"encoding/binary"
 	"fmt"
 )
 
@@ -78,9 +79,9 @@ func (f frame) toBytes() []byte {
 	buf[2] = f.hlen
 	buf[3] = f.hops
 
-	copy(buf[4:], unpack(4, uint64(f.xid)))
-	copy(buf[8:], unpack(2, uint64(f.secs)))
-	copy(buf[10:], unpack(2, uint64(f.flags)))
+	binary.BigEndian.PutUint32(buf[4:], f.xid)
+	binary.BigEndian.PutUint16(buf[8:], f.secs)
+	binary.BigEndian.PutUint16(buf[10:], f.flags)
 	copy(buf[12:], f.ciaddr[:4])
 	copy(buf[16:], f.yiaddr[:4])
 	copy(buf[20:], f.siaddr[:4])
