@@ -11,7 +11,7 @@ type RequestCallback func(*Server, uint32, net.HardwareAddr, net.IP)
 type ReleaseCallback func(*Server, net.HardwareAddr)
 
 type Server struct {
-	socket net.PacketConn
+	socket *net.UDPConn
 
 	discoverCb DiscoverCallback
 	requestCb  RequestCallback
@@ -51,7 +51,7 @@ func (s *Server) HandleRelease(callback ReleaseCallback) {
 }
 
 func (s *Server) ListenAndServe() error {
-	socket, err := net.ListenPacket("udp4", ":67")
+	socket, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(0, 0, 0, 0), Port: 67})
 	if err != nil {
 		return err
 	}
