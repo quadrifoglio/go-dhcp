@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
-	"net"
 
 	"github.com/quadrifoglio/go-dhcp"
 )
@@ -18,38 +17,29 @@ var (
 	LeaseTime   = uint32(86400) // 1 Day
 )
 
-func HandleDiscover(s *dhcp.Server, id uint32, mac net.HardwareAddr) {
-	log.Printf("DHCP Discover from NIC %s\n", mac)
+func Handle(s *dhcp.Server, message dhcp.Message) {
+	log.Printf("DHCP message from NIC %s\n", message.ClientMAC)
 
 	leaseTime := make([]byte, 4)
 	binary.BigEndian.PutUint32(leaseTime, LeaseTime)
 
-	message := dhcp.NewMessage(dhcp.DHCPTypeOffer, id, ServerIP, LeaseIP, mac)
-	message.SetOption(dhcp.OptionSubnetMask, LeaseMask)
-	message.SetOption(dhcp.OptionRouter, LeaseRouter)
-	message.SetOption(dhcp.OptionServerIdentifier, ServerIP)
-	message.SetOption(dhcp.OptionIPAddressLeaseTime, leaseTime)
+	var t byte
 
-	s.BroadcastPacket(message.GetFrame())
-}
+	if message.Type == dhcp.DHCPTypeDiscover {
+		t = dhcp.DHCPTypeOffer
+	} else if message.Type == dhcp.DHCPTypeRequest {
+		t = dhcp.DHCPTypeACK
+	} else {
+		return
+	}
 
-func HandleRequest(s *dhcp.Server, id uint32, mac net.HardwareAddr, requestedIp net.IP) {
-	log.Printf("DHCP Request from NIC %s for IP %s\n", mac, requestedIp)
+	response := dhcp.NewMessage(t, message.TransactionID, ServerIP, LeaseIP, message.ClientMAC)
+	response.SetOption(dhcp.OptionSubnetMask, LeaseMask)
+	response.SetOption(dhcp.OptionRouter, LeaseRouter)
+	response.SetOption(dhcp.OptionServerIdentifier, ServerIP)
+	response.SetOption(dhcp.OptionIPAddressLeaseTime, leaseTime)
 
-	leaseTime := make([]byte, 4)
-	binary.BigEndian.PutUint32(leaseTime, LeaseTime)
-
-	message := dhcp.NewMessage(dhcp.DHCPTypeACK, id, ServerIP, requestedIp, mac)
-	message.SetOption(dhcp.OptionSubnetMask, LeaseMask)
-	message.SetOption(dhcp.OptionRouter, LeaseRouter)
-	message.SetOption(dhcp.OptionServerIdentifier, ServerIP)
-	message.SetOption(dhcp.OptionIPAddressLeaseTime, leaseTime)
-
-	s.BroadcastPacket(message.GetFrame())
-}
-
-func HandleRelease(s *dhcp.Server, mac net.HardwareAddr) {
-	log.Printf("DHCP Release from NIC 0x%x\n", mac)
+	s.BroadcastPacket(response.GetFrame())
 }
 
 func main() {
@@ -60,9 +50,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	server.HandleDiscover(HandleDiscover)
-	server.HandleRequest(HandleRequest)
-	server.HandleRelease(HandleRelease)
-
+	server.HandleFunc(Handle)
 	log.Fatal(server.ListenAndServe())
 }

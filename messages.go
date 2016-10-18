@@ -1,9 +1,12 @@
 package dhcp
 
 import (
+	"fmt"
 	"net"
 )
 
+// Message represents a DHCP
+// message
 type Message struct {
 	Type          byte
 	TransactionID uint32
@@ -14,6 +17,8 @@ type Message struct {
 	Options Options
 }
 
+// NewMessage creates a new DHCP message with
+// the specified parameters
 func NewMessage(t byte, transactionId uint32, serverIp, clientIp net.IP, clientMac net.HardwareAddr) Message {
 	var m Message
 	m.Type = t
@@ -24,6 +29,33 @@ func NewMessage(t byte, transactionId uint32, serverIp, clientIp net.IP, clientM
 	m.Options = make(map[byte][]byte)
 
 	return m
+}
+
+// MessageFromFrame retreives the values from a DHCP frame
+// and constructs a Message from it
+func MessageFromFrame(f frame) (Message, error) {
+	var m Message
+
+	t, ok := f.opts[OptionDHCPMessageType]
+	if !ok {
+		return m, fmt.Errorf("no dhcp message type in frame")
+	}
+
+	m.Type = t[0]
+	m.TransactionID = f.xid
+	m.ServerIP = net.IP(f.siaddr).To4()
+	m.ClientMAC = net.HardwareAddr(f.chaddr[:f.hlen])
+
+	if m.Type == DHCPTypeRequest {
+		ip, ok := f.opts[OptionRequestedIPAddress]
+		if !ok {
+			return m, fmt.Errorf("no requested ip address in dhcp request")
+		}
+
+		m.ClientIP = net.IP(ip).To4()
+	}
+
+	return m, nil
 }
 
 func (m *Message) SetOption(option byte, value []byte) {
